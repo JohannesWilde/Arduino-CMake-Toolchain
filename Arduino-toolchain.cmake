@@ -45,6 +45,10 @@ endif()
 # Set system name and basic information
 set(CMAKE_SYSTEM_NAME "Arduino")
 
+# Default to Release build
+set(CMAKE_BUILD_TYPE "Release")
+set(CMAKE_CONFIGURATION_TYPES "Release Debug RelWithDebInfo MinSizeRel")
+
 # Set module path to enable local modules search
 set(ARDUINO_TOOLCHAIN_DIR "${CMAKE_CURRENT_LIST_DIR}")
 set(_ARDUINO_TOOLCHAIN_PARENT "${CMAKE_PARENT_LIST_FILE}")
