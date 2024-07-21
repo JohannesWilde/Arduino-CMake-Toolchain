@@ -75,8 +75,11 @@ function(InitializeArduinoPackagePathList)
 	elseif (${CMAKE_HOST_WIN32})
 
 		set(Prog86Path "ProgramFiles(x86)")
-		set(install_search_paths "$ENV{${Prog86Path}}/Arduino"
-			"$ENV{ProgramFiles}/Arduino")
+                set(install_search_paths
+                    "$ENV{${Prog86Path}}/Arduino"
+                    "$ENV{ProgramFiles}/Arduino"
+                    "$ENV{${Prog86Path}}/Arduino IDE"
+                    "$ENV{ProgramFiles}/Arduino IDE")
 		set(install_path_suffixes "")
 
 		file(GLOB package_search_paths "$ENV{LOCALAPPDATA}/Arduino15")
@@ -95,15 +98,27 @@ function(InitializeArduinoPackagePathList)
 
 	endif()
 
-	# Search for Arduino install path
+        # Search for Arduino install path
+        set(ARDUINO_VERSION_SUB_PATH_1_X "lib/version.txt")
+        set(ARDUINO_VERSION_SUB_PATH_2_X "resources/app/package.json")
 	find_path(ARDUINO_INSTALL_PATH
-			NAMES lib/version.txt
+                        NAMES ${ARDUINO_VERSION_SUB_PATH_1_X}
 			PATH_SUFFIXES ${install_path_suffixes}
 			HINTS ${install_search_paths}
 			NO_DEFAULT_PATH
 			NO_CMAKE_FIND_ROOT_PATH
 			DOC "Path to Arduino IDE installation")
-	# message("ARDUINO_INSTALL_PATH:${ARDUINO_INSTALL_PATH}")
+        if (NOT ARDUINO_INSTALL_PATH)
+            # Arduino IDE 2.x.x restructured the files, so look where it is supposed to be now.
+            find_path(ARDUINO_INSTALL_PATH
+                            NAMES ${ARDUINO_VERSION_SUB_PATH_2_X}
+                            PATH_SUFFIXES ${install_path_suffixes}
+                            HINTS ${install_search_paths}
+                            NO_DEFAULT_PATH
+                            NO_CMAKE_FIND_ROOT_PATH
+                            DOC "Path to Arduino IDE installation")
+        endif()
+        # message("ARDUINO_INSTALL_PATH:${ARDUINO_INSTALL_PATH}")
 	if (NOT ARDUINO_INSTALL_PATH AND NOT "${ARDUINO_ENABLE_PACKAGE_MANAGER}"
 		AND "${ARDUINO_BOARD_MANAGER_URL}" STREQUAL "")
 		message(FATAL_ERROR "Arduino IDE installation is not found!!!\n"
@@ -111,9 +126,20 @@ function(InitializeArduinoPackagePathList)
 			"Use -DARDUINO_BOARD_MANAGER_URL=<board_url> to try downloading\n")
 	elseif(ARDUINO_INSTALL_PATH AND NOT "${ARDUINO_ENABLE_PACKAGE_MANAGER}"
         AND "${ARDUINO_BOARD_MANAGER_URL}" STREQUAL "")
-		message("${ARDUINO_INSTALL_PATH}")
-		file(READ "${ARDUINO_INSTALL_PATH}/lib/version.txt" _version)
-		string(REGEX MATCH "[0-9]+\\.[0-9]" _ard_version "${_version}")
+                message("ARDUINO_INSTALL_PATH: ${ARDUINO_INSTALL_PATH}")
+                # todo: ${ARDUINO_INSTALL_PATH}/resources/app/package.json -> "version": "2.3.2",
+                if (EXISTS "${ARDUINO_INSTALL_PATH}/${ARDUINO_VERSION_SUB_PATH_1_X}")
+                    file(READ "${ARDUINO_INSTALL_PATH}/${ARDUINO_VERSION_SUB_PATH_1_X}" _version)
+                    string(REGEX MATCH "[0-9]+\\.[0-9]" _ard_version "${_version}")
+                    message("Arduino version: ${_version}")
+                elseif (EXISTS "${ARDUINO_INSTALL_PATH}/${ARDUINO_VERSION_SUB_PATH_2_X}")
+                    file(READ "${ARDUINO_INSTALL_PATH}/${ARDUINO_VERSION_SUB_PATH_2_X}" _version)
+                    string(REGEX MATCH "\"version\": \"[0-9]+\\.[0-9]+\\.[0-9]+\"" _ard_version_json_entry "${_version}")
+                    string(REGEX MATCH "\[0-9]+\\.[0-9]+\\.[0-9]+" _ard_version "${_ard_version_json_entry}")
+                    message("Arduino version: ${_ard_version}")
+                else ()
+                    message(WARNING "${ARDUINO_INSTALL_PATH} does not contain a recognized version file. Check for compatibility yourself!")
+                endif ()
 		if (_version AND "${_ard_version}" VERSION_LESS "1.5")
 			message(WARNING "${ARDUINO_INSTALL_PATH} may be unsupported version "
 				"${_version}. Please install newer version!")
