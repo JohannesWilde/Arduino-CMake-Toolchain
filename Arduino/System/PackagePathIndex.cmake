@@ -7,7 +7,7 @@ endif()
 set(_PACKAGE_PATH_INDEX_INCLUDED TRUE)
 
 #*****************************************************************************
-# Find the standard installation and package folders of Ardunio. Currently
+# Find the standard installation and package folders of Arduino. Currently
 # this toolchain has a dependency of Arduino IDE installation and any arduino
 # board management through arduino IDE. In future this dependency might be 
 # removed, and instead a mechanism will be provided to download an arduino
